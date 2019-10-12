@@ -1,10 +1,16 @@
-struct MutatorSequence {
+/// Vec? Just a buffer somewhere?
+///
+/// 1. bytes
+///     - buffer: [u8]
+/// 3. mutator sequence
+///     - mutators: vec<mutator>
+/// 4. mutator
+///     - length: SegmentLength, offset maybe?
+///     - target: BytesMut (?)
+///     - def mutate()
+///         returns
 
-}
-
-struct MutatorSegment {
-    length: SegmentLength
-}
+use bytes::{BytesMut, BufMut, BigEndian};
 
 enum SegmentLength {
     Fixed(u32),
@@ -13,8 +19,14 @@ enum SegmentLength {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
     fn it_works() {
-        assert_eq!(2 + 2, 4);
+        let mut buf = BytesMut::with_capacity(1024);
+
+        let a = buf.();
+
+
     }
 }
