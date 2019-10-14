@@ -9,24 +9,29 @@
 ///     - target: BytesMut (?)
 ///     - def mutate()
 ///         returns
-
-use bytes::{BytesMut, BufMut, BigEndian};
-
-enum SegmentLength {
-    Fixed(u32),
-    Range(u32, u32),
-}
+pub mod mutators;
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn it_works() {
-        let mut buf = BytesMut::with_capacity(1024);
+    fn checksum_example() {
+        // Let's imagine we have a simple web application that we want
+        // to fuzz. Its payload has a couple of fields and a checksum:
+        //
+        // action: transfer
+        // from: alice
+        // to: bob
+        // checksum: 6cc49303d213f798967ce815ad59ad3c
+        //
+        let mut seed = b"action: transfer\nfrom:alice \nto: bob\n";
 
-        let a = buf.();
+        // range: First(len(msg) - len(checksum))
+        // normal fuzzing of a defined range of the payload
 
+        // range:
 
+        // add another mutator that calculates a valid checksum
     }
 }
