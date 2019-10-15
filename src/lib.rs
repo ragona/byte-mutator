@@ -1,3 +1,5 @@
+use crate::mutators::Mutate;
+
 /// Vec? Just a buffer somewhere?
 ///
 /// 1. bytes
@@ -9,11 +11,27 @@
 ///     - target: BytesMut (?)
 ///     - def mutate()
 ///         returns
+///
+///
 pub mod mutators;
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::mutators::bitflipper::BitFlipper;
+    use crate::mutators::{Mutate, Range};
+
+    #[test]
+    fn single_mutation() {
+        let mut buffer = b"foo".to_vec();
+        let mut mutator = BitFlipper::new();
+
+        mutator.mutate(&mut buffer);
+        mutator.mutate(&mut buffer);
+        mutator.mutate(&mut buffer);
+
+        dbg!(buffer);
+    }
 
     #[test]
     fn checksum_example() {
