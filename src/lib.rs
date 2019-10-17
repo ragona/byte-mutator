@@ -1,4 +1,8 @@
-use crate::mutators::Mutate;
+#![feature(test)]
+
+extern crate test;
+
+use crate::mutators::Mutator;
 
 /// Vec? Just a buffer somewhere?
 ///
@@ -19,10 +23,11 @@ pub mod mutators;
 mod tests {
     use super::*;
     use crate::mutators::bitflipper::BitFlipper;
-    use crate::mutators::{Mutate, Range};
+    use crate::mutators::{Mutator, Range};
+    use test::Bencher;
 
     #[test]
-    fn single_mutation() {
+    fn mutate_buffer() {
         let mut buffer = b"foo".to_vec();
         let mut mutator = BitFlipper::new();
 
@@ -30,7 +35,7 @@ mod tests {
         mutator.mutate(&mut buffer);
         mutator.mutate(&mut buffer);
 
-        dbg!(buffer);
+        assert_eq!(buffer, [103, 101, 99]);
     }
 
     #[test]
@@ -51,5 +56,27 @@ mod tests {
         // range:
 
         // add another mutator that calculates a valid checksum
+    }
+
+    #[bench]
+    fn bench_copy_buffer(b: &mut Bencher) {
+        let mut buffer_a = [0u8; 1024];
+        let mut buffer_b = [1u8; 1024];
+        b.iter(|| {
+            for i in 0..1024 {
+                buffer_a[i] = buffer_b[i]
+            }
+        });
+    }
+
+    #[bench]
+    fn bench_copy_vec(b: &mut Bencher) {
+        let mut vec_a: Vec<u8> = vec![0; 1024];
+        let mut vec_b: Vec<u8> = vec![1; 1024];
+        b.iter(|| {
+            for i in 0..1024 {
+                vec_a[i] = vec_b[i]
+            }
+        });
     }
 }
