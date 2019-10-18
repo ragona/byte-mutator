@@ -18,15 +18,17 @@ use crate::mutators::Mutator;
 ///
 ///
 pub mod mutators;
+pub mod reset_buffer;
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::mutators::bitflipper::BitFlipper;
     use crate::mutators::{Mutator, Range};
+    use crate::reset_buffer::ResetBuffer;
+    use std::io::Write;
     use test::Bencher;
 
-    #[test]
     fn mutate_buffer() {
         let mut buffer = b"foo".to_vec();
         let mut mutator = BitFlipper::new();
@@ -67,6 +69,17 @@ mod tests {
                 buffer_a[i] = buffer_b[i]
             }
         });
+    }
+
+    fn byte_copy(from: &[u8], mut to: &mut [u8]) -> usize {
+        to.write(from).unwrap()
+    }
+
+    #[bench]
+    fn bench_copy_buffer_2(b: &mut Bencher) {
+        let mut buffer_a = [0u8; 1024];
+        let mut buffer_b = [1u8; 1024];
+        b.iter(|| byte_copy(&mut buffer_a, &mut buffer_b));
     }
 
     #[bench]
