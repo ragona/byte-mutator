@@ -2,94 +2,78 @@
 
 extern crate test;
 
-use crate::mutators::Mutator;
+use crate::mutators::{MutationSequence, Mutator, Range};
+use crate::reset_buffer::ResetBuffer;
 
-/// Vec? Just a buffer somewhere?
-///
-/// 1. bytes
-///     - buffer: [u8]
-/// 3. mutator sequence
-///     - mutators: vec<mutator>
-/// 4. mutator
-///     - length: SegmentLength, offset maybe?
-///     - target: BytesMut (?)
-///     - def mutate()
-///         returns
-///
-///
 pub mod mutators;
 pub mod reset_buffer;
+
+pub struct ByteMutator {
+    bytes: ResetBuffer,
+    mutators: Vec<MutationSequence>,
+}
+
+impl ByteMutator {
+    pub fn new(bytes: &[u8]) -> ByteMutator {
+        ByteMutator {
+            bytes: ResetBuffer::from_seed(bytes),
+            mutators: vec![],
+        }
+    }
+
+    pub fn next(&mut self) {
+        // set cur mutator
+        // we reset first so that we're getting small changes not huge ones
+        self.bytes.reset();
+        unimplemented!();
+        //self.mutators[0].mutate(self.bytes.as_mut())
+    }
+
+    pub fn read(&self) -> &[u8] {
+        self.bytes.read()
+    }
+
+    pub fn add_mutation(&mut self, sequence: MutationSequence) {
+        self.mutators.push(sequence);
+    }
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::mutators::bitflipper::BitFlipper;
-    use crate::mutators::{Mutator, Range};
     use crate::reset_buffer::ResetBuffer;
-    use std::io::Write;
-    use test::Bencher;
 
-    fn mutate_buffer() {
-        let mut buffer = b"foo".to_vec();
+    #[test]
+    fn mutate_and_reset() {
+        let mut buffer = ResetBuffer::new();
         let mut mutator = BitFlipper::new();
 
-        mutator.mutate(&mut buffer);
-        mutator.mutate(&mut buffer);
-        mutator.mutate(&mut buffer);
+        buffer.seed(b"foo").unwrap();
+        mutator.mutate(buffer.as_mut());
 
-        assert_eq!(buffer, [103, 101, 99]);
+        // first bit should flip resulting in 'goo'
+        // 0b1100110 -> 0b1100111, 103 -> 102, f -> g
+        assert_eq!(buffer.read(), b"goo");
+
+        buffer.reset().unwrap();
+
+        // should be back to 'foo'
+        assert_eq!(buffer.read(), b"foo");
     }
 
     #[test]
-    fn checksum_example() {
-        // Let's imagine we have a simple web application that we want
-        // to fuzz. Its payload has a couple of fields and a checksum:
-        //
-        // action: transfer
-        // from: alice
-        // to: bob
-        // checksum: 6cc49303d213f798967ce815ad59ad3c
-        //
-        let mut seed = b"action: transfer\nfrom:alice \nto: bob\n";
+    fn mutator_list() {
+        let mut foo = ByteMutator::new(b"foo");
 
-        // range: First(len(msg) - len(checksum))
-        // normal fuzzing of a defined range of the payload
-
-        // range:
-
-        // add another mutator that calculates a valid checksum
-    }
-
-    #[bench]
-    fn bench_copy_buffer(b: &mut Bencher) {
-        let mut buffer_a = [0u8; 1024];
-        let mut buffer_b = [1u8; 1024];
-        b.iter(|| {
-            for i in 0..1024 {
-                buffer_a[i] = buffer_b[i]
-            }
+        foo.add_mutation(MutationSequence {
+            mutator: Box::new(BitFlipper::new()),
+            iterations: 0,
+            range: Range::All,
         });
-    }
 
-    fn byte_copy(from: &[u8], mut to: &mut [u8]) -> usize {
-        to.write(from).unwrap()
-    }
+        foo.next();
 
-    #[bench]
-    fn bench_copy_buffer_2(b: &mut Bencher) {
-        let mut buffer_a = [0u8; 1024];
-        let mut buffer_b = [1u8; 1024];
-        b.iter(|| byte_copy(&mut buffer_a, &mut buffer_b));
-    }
-
-    #[bench]
-    fn bench_copy_vec(b: &mut Bencher) {
-        let mut vec_a: Vec<u8> = vec![0; 1024];
-        let mut vec_b: Vec<u8> = vec![1; 1024];
-        b.iter(|| {
-            for i in 0..1024 {
-                vec_a[i] = vec_b[i]
-            }
-        });
+        dbg!(foo.read());
     }
 }

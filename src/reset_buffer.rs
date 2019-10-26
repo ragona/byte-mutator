@@ -1,7 +1,7 @@
 use std::io::{self, Error, Write};
 
 // todo: Varying sizes
-const BUFFER_SIZE: usize = 8;
+const BUFFER_SIZE: usize = 1024;
 
 /// Fixed size buffer that can be reset to an original state
 pub struct ResetBuffer {
@@ -22,7 +22,14 @@ impl ResetBuffer {
         }
     }
 
+    pub fn from_seed(seed: &[u8]) -> ResetBuffer {
+        let mut buffer = ResetBuffer::new();
+        buffer.seed(seed).unwrap();
+        buffer
+    }
+
     /// Sets the default state of the buffer
+    /// todo: Make this infallible?
     pub fn seed(&mut self, buffer: &[u8]) -> io::Result<usize> {
         self.buffer.as_mut().write(buffer)?;
         self.seed.as_mut().write(buffer)?;
@@ -32,12 +39,18 @@ impl ResetBuffer {
     }
 
     /// Restores self.buffer to its original state, discarding changes
+    /// todo: Can this actually fail? Make this infallible.
+    /// todo: Can we avoid writing the entire buffer here?
     pub fn reset(&mut self) -> io::Result<usize> {
         self.buffer.as_mut().write(&self.seed)
     }
 
     pub fn read(&self) -> &[u8] {
         &self.buffer[..self.end]
+    }
+
+    pub fn as_mut(&mut self) -> &mut [u8] {
+        &mut self.buffer[..self.end]
     }
 }
 

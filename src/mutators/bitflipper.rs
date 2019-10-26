@@ -26,9 +26,9 @@ impl Mutator for BitFlipper {
             Range::Range(start, end) => self.count % (end - start),
         };
 
-        let B = i / 8; // which byte the bit is in
-        let b = i % 8; // which bit to flip in that byte
-        let v: u8 = bytes[B] ^ 1 << b as u8; // new value of the byte
+        let byte = i / 8;
+        let bit = i % 8;
+        let v: u8 = bytes[byte] ^ 1 << bit as u8;
 
         bytes[i] = v;
 
