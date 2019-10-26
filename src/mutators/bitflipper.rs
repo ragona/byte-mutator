@@ -8,11 +8,11 @@ pub struct BitFlipper {
 }
 
 impl BitFlipper {
-    pub fn new() -> BitFlipper {
+    pub fn new(width: u8, range: Range) -> BitFlipper {
         BitFlipper {
-            width: 1,
+            width,
+            range,
             count: 0,
-            range: Range::All,
         }
     }
 }
@@ -22,7 +22,7 @@ impl Mutator for BitFlipper {
         let i = match self.range {
             Range::All => self.count % bytes.len(),
             Range::First(n) => self.count % n,
-            Range::Last(n) => self.count % n,
+            Range::Last(n) => self.count % n, // todo this looks like a bug
             Range::Range(start, end) => self.count % (end - start),
         };
 
@@ -31,7 +31,6 @@ impl Mutator for BitFlipper {
         let v: u8 = bytes[byte] ^ 1 << bit as u8;
 
         bytes[i] = v;
-
         self.count += 1;
     }
 }

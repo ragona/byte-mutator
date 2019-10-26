@@ -52,6 +52,8 @@ impl ResetBuffer {
     pub fn as_mut(&mut self) -> &mut [u8] {
         &mut self.buffer[..self.end]
     }
+
+    // todo: grow function?
 }
 
 impl Write for ResetBuffer {

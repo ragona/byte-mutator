@@ -1,5 +1,6 @@
 use crate::mutators::bitflipper::BitFlipper;
 use crate::reset_buffer::ResetBuffer;
+use crate::ByteMutator;
 
 pub mod bitflipper;
 
@@ -21,6 +22,8 @@ pub enum Range {
 }
 
 pub trait Mutator {
+    /// Takes a mutable reference to a slice, and performs some operation, such as flipping bits,
+    /// incrementing or decrementing numbers.
     fn mutate(&mut self, bytes: &mut [u8]);
 }
 
@@ -31,7 +34,7 @@ mod tests {
     #[test]
     fn flip_bits() {
         let mut bytes = [0u8; 8];
-        let mut bf = BitFlipper::new();
+        let mut bf = BitFlipper::new(1, Range::All);
 
         bf.mutate(&mut bytes);
 

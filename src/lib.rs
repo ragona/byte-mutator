@@ -10,7 +10,7 @@ pub mod reset_buffer;
 
 pub struct ByteMutator {
     bytes: ResetBuffer,
-    mutators: Vec<MutationSequence>,
+    mutators: Vec<Box<dyn Mutator>>,
 }
 
 impl ByteMutator {
@@ -25,16 +25,15 @@ impl ByteMutator {
         // set cur mutator
         // we reset first so that we're getting small changes not huge ones
         self.bytes.reset();
-        unimplemented!();
-        //self.mutators[0].mutate(self.bytes.as_mut())
+        self.mutators[0].mutate(self.bytes.as_mut())
     }
 
     pub fn read(&self) -> &[u8] {
         self.bytes.read()
     }
 
-    pub fn add_mutation(&mut self, sequence: MutationSequence) {
-        self.mutators.push(sequence);
+    pub fn add_mutator(&mut self, mutator: Box<dyn Mutator>) {
+        self.mutators.push(mutator);
     }
 }
 
@@ -47,7 +46,7 @@ mod tests {
     #[test]
     fn mutate_and_reset() {
         let mut buffer = ResetBuffer::new();
-        let mut mutator = BitFlipper::new();
+        let mut mutator = BitFlipper::new(1, Range::All);
 
         buffer.seed(b"foo").unwrap();
         mutator.mutate(buffer.as_mut());
@@ -66,12 +65,7 @@ mod tests {
     fn mutator_list() {
         let mut foo = ByteMutator::new(b"foo");
 
-        foo.add_mutation(MutationSequence {
-            mutator: Box::new(BitFlipper::new()),
-            iterations: 0,
-            range: Range::All,
-        });
-
+        foo.add_mutator(Box::new(BitFlipper::new(1, Range::All)));
         foo.next();
 
         dbg!(foo.read());
