@@ -5,6 +5,7 @@ extern crate test;
 use crate::mutators::{MutationSequence, Mutator, Range};
 use crate::reset_buffer::ResetBuffer;
 
+pub mod config;
 pub mod mutators;
 pub mod reset_buffer;
 
