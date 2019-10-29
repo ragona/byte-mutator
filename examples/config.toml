@@ -1,9 +1,0 @@
-# a list of seeds to start from
-[[seeds]]
-    path = "foo/path"
-    # a list of mutations to try on this seed
-    [[seeds.mutations]]
-        name = "bitflipper"
-        iterations = 10
-        range = [0, 10]
-        width = 1
