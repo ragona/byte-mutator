@@ -53,6 +53,7 @@ mod tests {
                         name = "bitflipper"
                         iterations = 10
                         range = [0, 10]
+                        width = 1
         "#,
         )
         .unwrap();
