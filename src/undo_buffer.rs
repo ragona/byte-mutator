@@ -2,17 +2,18 @@ use arrayvec::ArrayVec;
 use std::io::Write;
 
 // todo fix -- env var?
-const BUFFER_SIZE: usize = 16;
+const DEFAULT_BUFFER_SIZE: usize = 1024;
 
+#[derive(Debug, Clone)]
 pub struct UndoBuffer {
-    pub buffer: ArrayVec<[u8; BUFFER_SIZE]>,
-    original: ArrayVec<[u8; BUFFER_SIZE]>,
+    pub buffer: ArrayVec<[u8; DEFAULT_BUFFER_SIZE]>,
+    original: ArrayVec<[u8; DEFAULT_BUFFER_SIZE]>,
 }
 
 impl UndoBuffer {
     pub fn new(buf: &[u8]) -> UndoBuffer {
-        let mut original = ArrayVec::<[u8; BUFFER_SIZE]>::new();
-        let mut buffer = ArrayVec::<[u8; BUFFER_SIZE]>::new();
+        let mut original = ArrayVec::<[u8; DEFAULT_BUFFER_SIZE]>::new();
+        let mut buffer = ArrayVec::<[u8; DEFAULT_BUFFER_SIZE]>::new();
 
         // todo: will panic if buf.len() > original.len()
         (&mut original).write(buf);
@@ -30,5 +31,9 @@ impl UndoBuffer {
         let mut original = &mut self.original[start..end];
 
         changed.write(&original);
+    }
+
+    pub fn read(&self) -> &[u8] {
+        &self.buffer
     }
 }
