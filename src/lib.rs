@@ -1,28 +1,83 @@
 use arrayvec;
 
-use crate::mutators::Mutator;
+use crate::mutators::{Mutator, MutatorType};
 use crate::undo_buffer::UndoBuffer;
 
 pub mod mutators;
 pub mod undo_buffer;
 
+pub struct ByteMutatorConfig {
+    stages: Vec<StageConfig>,
+}
+
+impl ByteMutatorConfig {
+    pub fn new() -> ByteMutatorConfig {
+        ByteMutatorConfig { stages: vec![] }
+    }
+
+    pub fn add_stage(&mut self, stage: StageConfig) {
+        self.stages.push(stage);
+    }
+}
+
+pub struct StageConfig {
+    iterations: usize,
+    mutations: Vec<MutationConfig>,
+}
+
+impl StageConfig {
+    pub fn new(iterations: usize) -> StageConfig {
+        StageConfig {
+            iterations,
+            mutations: vec![],
+        }
+    }
+
+    pub fn add_mutation(&mut self, mutation: MutationConfig) {
+        self.mutations.push(mutation);
+    }
+}
+pub struct MutationConfig {
+    mutator_type: MutatorType,
+    range: Option<(usize, usize)>,
+}
+
+impl MutationConfig {
+    pub fn new(mutator_type: MutatorType) -> MutationConfig {
+        MutationConfig {
+            mutator_type,
+            range: None,
+        }
+    }
+}
+
 pub struct ByteMutator {
     bytes: UndoBuffer,
-    mutators: Vec<Box<dyn Mutator>>,
+    config: Option<ByteMutatorConfig>,
+    current_mutator: Option<Box<dyn Mutator>>,
 }
 
 impl ByteMutator {
     pub fn new(bytes: &[u8]) -> ByteMutator {
         ByteMutator {
+            config: None,
+            current_mutator: None,
             bytes: UndoBuffer::new(bytes),
-            mutators: vec![],
+        }
+    }
+
+    pub fn from_config(bytes: &[u8], config: ByteMutatorConfig) -> ByteMutator {
+        ByteMutator {
+            bytes: UndoBuffer::new(bytes),
+            config: Some(config),
+            current_mutator: None,
         }
     }
 
     pub fn next(&mut self) {
         // set cur mutator
         // we reset first so that we're getting small changes not huge ones
-        self.mutators[0].mutate(self.bytes.as_mut());
+        //        self.mutators[0].mutate(self.bytes.as_mut());
     }
 
     pub fn read(&self) -> &[u8] {
@@ -30,7 +85,7 @@ impl ByteMutator {
     }
 
     pub fn add_mutator(&mut self, mutator: Box<dyn Mutator>) {
-        self.mutators.push(mutator);
+        // self.mutators.push(mutator);
     }
 }
 
@@ -83,5 +138,18 @@ mod tests {
 
         // make sure we match
         assert_eq!(buffer.read()[0..3], b"foo"[..]);
+    }
+
+    #[test]
+    fn build_from_config() {
+        let mut config = ByteMutatorConfig::new();
+        let mut stage = StageConfig::new(10);
+
+        stage.add_mutation(MutationConfig {
+            mutator_type: MutatorType::BitFlipper { width: 1 },
+            range: None,
+        });
+
+        config.add_stage(stage);
     }
 }

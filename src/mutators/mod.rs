@@ -10,6 +10,20 @@ pub trait Mutator {
     fn mutate(&mut self, bytes: &mut [u8]) -> (usize, usize);
 }
 
+pub struct MutatorFactory {}
+
+impl MutatorFactory {
+    pub fn from_type(t: MutatorType) -> Box<dyn Mutator> {
+        match t {
+            MutatorType::BitFlipper { width } => Box::new(BitFlipper::new(width)),
+        }
+    }
+}
+
+pub enum MutatorType {
+    BitFlipper { width: u8 },
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
