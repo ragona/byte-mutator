@@ -6,7 +6,7 @@ const DEFAULT_BUFFER_SIZE: usize = 1024;
 
 #[derive(Debug, Clone)]
 pub struct UndoBuffer {
-    pub buffer: ArrayVec<[u8; DEFAULT_BUFFER_SIZE]>,
+    buffer: ArrayVec<[u8; DEFAULT_BUFFER_SIZE]>,
     original: ArrayVec<[u8; DEFAULT_BUFFER_SIZE]>,
 }
 
@@ -22,6 +22,10 @@ impl UndoBuffer {
         UndoBuffer { original, buffer }
     }
 
+    pub fn as_mut(&mut self) -> &mut [u8] {
+        &mut self.buffer[..]
+    }
+
     pub fn get_mut_range(&mut self, start: usize, end: usize) -> &mut [u8] {
         &mut self.buffer[start..end]
     }
@@ -34,6 +38,21 @@ impl UndoBuffer {
     }
 
     pub fn read(&self) -> &[u8] {
-        &self.buffer
+        &self.buffer[..]
     }
+
+    pub fn undo_all(&mut self) {
+        // note: we need to take a slice of self.buffer here or we write after the existing bytes
+        (&mut self.buffer[..]).write(&self.original[..]);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    //    #[test]
+    //    fn foo() {
+    //         todo:
+    //    }
 }

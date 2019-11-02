@@ -1,23 +1,22 @@
-use crate::mutators::{MutationSequence, Mutator, Range};
-use crate::reset_buffer::ResetBuffer;
-
 use arrayvec;
 
+use crate::mutators::{MutationSequence, Mutator, Range};
+use crate::undo_buffer::UndoBuffer;
+
 pub mod mutators;
-pub mod reset_buffer;
 pub mod undo_buffer;
 
 pub type RangeLimit = (usize, usize);
 
 pub struct ByteMutator {
-    bytes: ResetBuffer,
+    bytes: UndoBuffer,
     mutators: Vec<Box<dyn Mutator>>,
 }
 
 impl ByteMutator {
     pub fn new(bytes: &[u8]) -> ByteMutator {
         ByteMutator {
-            bytes: ResetBuffer::from_seed(bytes),
+            bytes: UndoBuffer::new(bytes),
             mutators: vec![],
         }
     }
@@ -41,23 +40,19 @@ impl ByteMutator {
 mod tests {
     use super::*;
     use crate::mutators::bitflipper::BitFlipper;
-    use crate::reset_buffer::ResetBuffer;
 
     #[test]
     fn mutate_and_reset() {
-        let mut buffer = ResetBuffer::new();
+        let mut buffer = UndoBuffer::new(b"foo");
         let mut mutator = BitFlipper::new(1);
-
-        buffer.seed(b"foo").unwrap();
-        mutator.mutate(buffer.as_mut());
 
         // first bit should flip resulting in 'goo'
         // 0b1100110 -> 0b1100111, 103 -> 102, f -> g
+        mutator.mutate(buffer.as_mut());
         assert_eq!(buffer.read(), b"goo");
 
-        buffer.reset().unwrap();
-
         // should be back to 'foo'
+        buffer.undo_all();
         assert_eq!(buffer.read(), b"foo");
     }
 
@@ -83,12 +78,12 @@ mod tests {
         let (start, end) = mutator.mutate(range);
 
         // assert that something changed
-        assert_ne!(buffer.buffer[0..3], b"foo"[..]);
+        assert_ne!(buffer.read()[0..3], b"foo"[..]);
 
         // set it back
         buffer.undo_range(min + start, min + end);
 
         // make sure we match
-        assert_eq!(buffer.buffer[0..3], b"foo"[..]);
+        assert_eq!(buffer.read()[0..3], b"foo"[..]);
     }
 }
