@@ -1,12 +1,10 @@
 use arrayvec;
 
-use crate::mutators::{MutationSequence, Mutator, Range};
+use crate::mutators::Mutator;
 use crate::undo_buffer::UndoBuffer;
 
 pub mod mutators;
 pub mod undo_buffer;
-
-pub type RangeLimit = (usize, usize);
 
 pub struct ByteMutator {
     bytes: UndoBuffer,

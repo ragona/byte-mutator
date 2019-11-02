@@ -3,21 +3,11 @@ use crate::ByteMutator;
 
 pub mod bitflipper;
 
-/// A logical container for a seed and all of the one-step mutations that it will take
-pub struct Strain {}
-
-pub struct MutationSequence {
-    pub mutator: Box<dyn Mutator>,
-    pub iterations: u32,
-}
-
-pub type Range = (usize, usize);
-
 pub trait Mutator {
     /// Takes a mutable reference to a slice, and performs some operation, such as flipping bits,
     /// incrementing or decrementing numbers. Returns a tuple representing the index of the first
     /// and last bytes modified, used to undo the range that was mutated.
-    fn mutate(&mut self, bytes: &mut [u8]) -> Range;
+    fn mutate(&mut self, bytes: &mut [u8]) -> (usize, usize);
 }
 
 #[cfg(test)]
