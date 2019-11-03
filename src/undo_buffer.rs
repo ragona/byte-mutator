@@ -1,4 +1,5 @@
 use arrayvec::ArrayVec;
+use std::cmp::min;
 use std::hash::Hasher;
 use std::io::Write;
 
@@ -28,6 +29,7 @@ impl UndoBuffer {
     }
 
     pub fn get_mut_range(&mut self, start: usize, end: usize) -> &mut [u8] {
+        let end = min(self.buffer.len(), end);
         &mut self.buffer[start..end]
     }
 

@@ -4,6 +4,7 @@ use crate::fuzz_config::FuzzConfig;
 use crate::mutators::{Mutation, MutatorType};
 use crate::undo_buffer::UndoBuffer;
 use serde_derive::Deserialize;
+use std::cmp::max;
 
 pub mod fuzz_config;
 pub mod mutators;
