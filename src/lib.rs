@@ -1,91 +1,82 @@
 use arrayvec;
 
-use crate::mutators::{Mutator, MutatorType};
+use crate::mutators::{Mutation, MutatorType};
 use crate::undo_buffer::UndoBuffer;
 
 pub mod mutators;
 pub mod undo_buffer;
 
-pub struct ByteMutatorConfig {
-    stages: Vec<StageConfig>,
-}
-
-impl ByteMutatorConfig {
-    pub fn new() -> ByteMutatorConfig {
-        ByteMutatorConfig { stages: vec![] }
-    }
-
-    pub fn add_stage(&mut self, stage: StageConfig) {
-        self.stages.push(stage);
-    }
-}
-
-pub struct StageConfig {
+pub struct Stage {
     iterations: usize,
-    mutations: Vec<MutationConfig>,
+    max_iterations: usize,
+    mutations: Vec<Mutation>,
 }
 
-impl StageConfig {
-    pub fn new(iterations: usize) -> StageConfig {
-        StageConfig {
-            iterations,
+impl Stage {
+    pub fn new(max_iterations: usize) -> Stage {
+        Stage {
+            max_iterations,
+            iterations: 0,
             mutations: vec![],
         }
     }
 
-    pub fn add_mutation(&mut self, mutation: MutationConfig) {
-        self.mutations.push(mutation);
+    pub fn is_done(&self) -> bool {
+        self.iterations >= self.max_iterations
     }
-}
-pub struct MutationConfig {
-    mutator_type: MutatorType,
-    range: Option<(usize, usize)>,
-}
 
-impl MutationConfig {
-    pub fn new(mutator_type: MutatorType) -> MutationConfig {
-        MutationConfig {
-            mutator_type,
-            range: None,
-        }
+    pub fn add_mutation(&mut self, mutation: Mutation) {
+        self.mutations.push(mutation);
     }
 }
 
 pub struct ByteMutator {
     bytes: UndoBuffer,
-    config: Option<ByteMutatorConfig>,
-    current_mutator: Option<Box<dyn Mutator>>,
+    stages: Vec<Stage>,
+    cur_stage: usize,
 }
 
 impl ByteMutator {
     pub fn new(bytes: &[u8]) -> ByteMutator {
         ByteMutator {
-            config: None,
-            current_mutator: None,
             bytes: UndoBuffer::new(bytes),
+            stages: vec![],
+            cur_stage: 0,
         }
     }
 
-    pub fn from_config(bytes: &[u8], config: ByteMutatorConfig) -> ByteMutator {
-        ByteMutator {
-            bytes: UndoBuffer::new(bytes),
-            config: Some(config),
-            current_mutator: None,
-        }
+    pub fn add_stage(&mut self, stage: Stage) {
+        self.stages.push(stage);
     }
 
     pub fn next(&mut self) {
-        // set cur mutator
-        // we reset first so that we're getting small changes not huge ones
-        //        self.mutators[0].mutate(self.bytes.as_mut());
+        // todo: ranged undo
+        // we reset the last change first so that we're getting small changes not huge ones
+        self.bytes.undo_all();
+
+        // nothing to do
+        if self.stages.len() == 0 {
+            return;
+        }
+
+        let stage = &mut self.stages[0];
+        for mutation in &mut stage.mutations {
+            match mutation.range {
+                Some((start, end)) => {
+                    mutation.mutate(self.bytes.get_mut_range(start, end), stage.iterations)
+                }
+                None => mutation.mutate(self.bytes.as_mut(), stage.iterations),
+            };
+        }
+
+        stage.iterations += 1;
+        if stage.is_done() {
+            self.stages.drain(..1); // todo: Is this right?
+        }
     }
 
     pub fn read(&self) -> &[u8] {
         self.bytes.read()
-    }
-
-    pub fn add_mutator(&mut self, mutator: Box<dyn Mutator>) {
-        // self.mutators.push(mutator);
     }
 }
 
@@ -97,11 +88,10 @@ mod tests {
     #[test]
     fn mutate_and_reset() {
         let mut buffer = UndoBuffer::new(b"foo");
-        let mut mutator = BitFlipper::new(1);
 
         // first bit should flip resulting in 'goo'
         // 0b1100110 -> 0b1100111, 103 -> 102, f -> g
-        mutator.mutate(buffer.as_mut());
+        BitFlipper::mutate(buffer.as_mut(), 0, 1);
         assert_eq!(buffer.read(), b"goo");
 
         // should be back to 'foo'
@@ -110,25 +100,14 @@ mod tests {
     }
 
     #[test]
-    fn mutator_list() {
-        let mut foo = ByteMutator::new(b"foo");
-
-        foo.add_mutator(Box::new(BitFlipper::new(1)));
-        foo.next();
-
-        dbg!(foo.read());
-    }
-
-    #[test]
-    fn wtf() {
+    fn mutate_reset_range() {
         // clamp changes to the last byte
         let (min, max) = (2, 3);
         let mut buffer = undo_buffer::UndoBuffer::new(b"foo");
-        let mut mutator = BitFlipper::new(1);
         let mut range = buffer.get_mut_range(min, max);
 
         // flip a bit
-        let (start, end) = mutator.mutate(range);
+        let (start, end) = BitFlipper::mutate(range, 0, 1);
 
         // assert that something changed
         assert_ne!(buffer.read()[0..3], b"foo"[..]);
@@ -141,15 +120,15 @@ mod tests {
     }
 
     #[test]
-    fn build_from_config() {
-        let mut config = ByteMutatorConfig::new();
-        let mut stage = StageConfig::new(10);
+    fn mutator_stage() {
+        let mut byte_mutator = ByteMutator::new(b"foo");
+        let mut stage = Stage::new(10);
 
-        stage.add_mutation(MutationConfig {
-            mutator_type: MutatorType::BitFlipper { width: 1 },
-            range: None,
-        });
+        stage.add_mutation(Mutation::new(MutatorType::BitFlipper { width: 1 }, None));
+        byte_mutator.add_stage(stage);
 
-        config.add_stage(stage);
+        for _ in 0..20 {
+            byte_mutator.next();
+        }
     }
 }
