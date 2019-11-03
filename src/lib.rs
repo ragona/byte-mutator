@@ -1,13 +1,17 @@
 use arrayvec;
 
+use crate::fuzz_config::FuzzConfig;
 use crate::mutators::{Mutation, MutatorType};
 use crate::undo_buffer::UndoBuffer;
+use serde_derive::Deserialize;
 
+pub mod fuzz_config;
 pub mod mutators;
 pub mod undo_buffer;
 
+#[derive(Debug, Deserialize, Clone)]
 pub struct Stage {
-    iterations: usize,
+    cur_iterations: usize,
     max_iterations: usize,
     mutations: Vec<Mutation>,
 }
@@ -16,13 +20,17 @@ impl Stage {
     pub fn new(max_iterations: usize) -> Stage {
         Stage {
             max_iterations,
-            iterations: 0,
+            cur_iterations: 0,
             mutations: vec![],
         }
     }
 
     pub fn is_done(&self) -> bool {
-        self.iterations >= self.max_iterations
+        match self.max_iterations {
+            // no figured max means go forever
+            0 => false,
+            _ => self.cur_iterations >= self.max_iterations,
+        }
     }
 
     pub fn add_mutation(&mut self, mutation: Mutation) {
@@ -30,6 +38,7 @@ impl Stage {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct ByteMutator {
     bytes: UndoBuffer,
     stages: Vec<Stage>,
@@ -41,6 +50,14 @@ impl ByteMutator {
         ByteMutator {
             bytes: UndoBuffer::new(bytes),
             stages: vec![],
+            cur_stage: 0,
+        }
+    }
+
+    pub fn new_from_config(bytes: &[u8], config: FuzzConfig) -> ByteMutator {
+        ByteMutator {
+            bytes: UndoBuffer::new(bytes),
+            stages: config.stages,
             cur_stage: 0,
         }
     }
@@ -63,13 +80,13 @@ impl ByteMutator {
         for mutation in &mut stage.mutations {
             match mutation.range {
                 Some((start, end)) => {
-                    mutation.mutate(self.bytes.get_mut_range(start, end), stage.iterations)
+                    mutation.mutate(self.bytes.get_mut_range(start, end), stage.cur_iterations)
                 }
-                None => mutation.mutate(self.bytes.as_mut(), stage.iterations),
+                None => mutation.mutate(self.bytes.as_mut(), stage.cur_iterations),
             };
         }
 
-        stage.iterations += 1;
+        stage.cur_iterations += 1;
         if stage.is_done() {
             self.stages.drain(..1); // todo: Is this right?
         }
