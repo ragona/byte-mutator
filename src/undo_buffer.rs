@@ -1,4 +1,5 @@
 use arrayvec::ArrayVec;
+use std::hash::Hasher;
 use std::io::Write;
 
 // todo fix -- env var?
