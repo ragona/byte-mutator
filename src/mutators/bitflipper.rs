@@ -1,5 +1,3 @@
-use super::*;
-
 #[derive(Debug, Copy, Clone)]
 pub struct BitFlipper {}
 
@@ -28,7 +26,7 @@ mod tests {
 
         // first bit should flip resulting in 'goo'
         // 0b1100110 -> 0b1100111, 103 -> 102, f -> g
-        BitFlipper::mutate(buffer.as_mut(), 0, 1);
+        BitFlipper::mutate(buffer.get_mut(), 0, 1);
         assert_eq!(buffer.read(), b"goo");
     }
 }

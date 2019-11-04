@@ -1,9 +1,8 @@
 use crate::mutators::{Mutation, MutatorType};
-use crate::{ByteMutator, Iterations, Stage};
+use crate::{Iterations, Stage};
 use serde_derive::Deserialize;
 use std::fs;
 use std::io::{self, Error};
-use std::path::Path;
 use toml;
 
 #[derive(Deserialize, Debug, Clone)]
@@ -28,7 +27,7 @@ impl FuzzConfig {
         match fs::read_to_string(path) {
             Ok(s) => match toml::from_str(&s) {
                 Ok(c) => Ok(c),
-                Err(e) => Err(Error::new(
+                Err(_) => Err(Error::new(
                     io::ErrorKind::InvalidInput,
                     "Failed to parse config",
                 )),

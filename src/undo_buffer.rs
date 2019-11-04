@@ -1,6 +1,5 @@
 use arrayvec::ArrayVec;
 use std::cmp::min;
-use std::hash::Hasher;
 use std::io::Write;
 
 // todo fix -- env var?
@@ -18,8 +17,12 @@ impl UndoBuffer {
         let mut buffer = ArrayVec::<[u8; DEFAULT_BUFFER_SIZE]>::new();
 
         // todo: will panic if buf.len() > original.len()
-        (&mut original).write(buf);
-        (&mut buffer).write(buf);
+        (&mut original)
+            .write_all(buf)
+            .expect("Failed to copy into UndoBuffer");
+        (&mut buffer)
+            .write_all(buf)
+            .expect("Failed to copy into UndoBuffer");
 
         UndoBuffer { original, buffer }
     }
@@ -28,7 +31,11 @@ impl UndoBuffer {
         self.buffer.len()
     }
 
-    pub fn as_mut(&mut self) -> &mut [u8] {
+    pub fn is_empty(&self) -> bool {
+        self.buffer.len() == 0
+    }
+
+    pub fn get_mut(&mut self) -> &mut [u8] {
         &mut self.buffer[..]
     }
 
@@ -38,28 +45,22 @@ impl UndoBuffer {
     }
 
     pub fn undo_range(&mut self, start: usize, end: usize) {
+        let end = min(self.buffer.len(), end);
         let mut changed = &mut self.buffer[start..end];
-        let mut original = &mut self.original[start..end];
+        let original = &mut self.original[start..end];
 
-        changed.write(&original);
+        changed.write_all(&original).expect("Failed to undo range");
     }
 
     pub fn read(&self) -> &[u8] {
         &self.buffer[..]
     }
 
+    /// Undo all changes and set the readable buffer back to the original state
     pub fn undo_all(&mut self) {
         // note: we need to take a slice of self.buffer here or we write after the existing bytes
-        (&mut self.buffer[..]).write(&self.original[..]);
+        (&mut self.buffer[..])
+            .write_all(&self.original[..])
+            .expect("Failed to write");
     }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    //    #[test]
-    //    fn foo() {
-    //         todo:
-    //    }
 }

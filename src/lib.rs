@@ -1,11 +1,9 @@
-use arrayvec;
+use serde_derive::Deserialize;
 
 use crate::fuzz_config::FuzzConfig;
-use crate::mutators::{Mutation, MutatorType};
+use crate::mutators::Mutation;
 use crate::undo_buffer::UndoBuffer;
 use crate::Iterations::Unlimited;
-use serde_derive::Deserialize;
-use std::cmp::max;
 
 pub mod fuzz_config;
 pub mod mutators;
@@ -61,6 +59,12 @@ impl Stage {
     }
 }
 
+impl Default for Stage {
+    fn default() -> Self {
+        Stage::new()
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct ByteMutator {
     bytes: UndoBuffer,
@@ -95,7 +99,7 @@ impl ByteMutator {
 
     pub fn next(&mut self) {
         // nothing to do
-        if self.stages.len() == 0 {
+        if self.stages.is_empty() {
             return;
         }
 
@@ -109,7 +113,7 @@ impl ByteMutator {
                 Some((start, end)) => {
                     mutation.mutate(self.bytes.get_mut_range(start, end), stage.count)
                 }
-                None => mutation.mutate(self.bytes.as_mut(), stage.count),
+                None => mutation.mutate(self.bytes.get_mut(), stage.count),
             };
         }
 
@@ -130,6 +134,7 @@ impl ByteMutator {
 mod tests {
     use super::*;
     use crate::mutators::bitflipper::BitFlipper;
+    use crate::mutators::MutatorType;
 
     #[test]
     fn mutate_and_reset() {
@@ -137,7 +142,7 @@ mod tests {
 
         // first bit should flip resulting in 'goo'
         // 0b1100110 -> 0b1100111, 103 -> 102, f -> g
-        BitFlipper::mutate(buffer.as_mut(), 0, 1);
+        BitFlipper::mutate(buffer.get_mut(), 0, 1);
         assert_eq!(buffer.read(), b"goo");
 
         // should be back to 'foo'
@@ -150,7 +155,7 @@ mod tests {
         // clamp changes to the last byte
         let (min, max) = (2, 3);
         let mut buffer = undo_buffer::UndoBuffer::new(b"foo");
-        let mut range = buffer.get_mut_range(min, max);
+        let range = buffer.get_mut_range(min, max);
 
         // flip a bit
         let (start, end) = BitFlipper::mutate(range, 0, 1);

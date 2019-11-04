@@ -1,5 +1,4 @@
 use crate::mutators::bitflipper::BitFlipper;
-use crate::ByteMutator;
 use serde_derive::Deserialize;
 pub mod bitflipper;
 
