@@ -1,5 +1,9 @@
+//! Deserializes a .toml config into a FuzzConfig object that can be used to configure a
+//! ByteMutator. See tests for examples.
+
 use crate::mutators::{Mutation, MutatorType};
 use crate::{Iterations, Stage};
+
 use serde_derive::Deserialize;
 use std::fs;
 use std::io::{self, Error};
@@ -23,6 +27,7 @@ impl FuzzConfig {
             }],
         }
     }
+
     pub fn from_file(path: &str) -> std::io::Result<FuzzConfig> {
         match fs::read_to_string(path) {
             Ok(s) => match toml::from_str(&s) {
@@ -46,7 +51,6 @@ mod tests {
         let config = toml::from_str::<FuzzConfig>(
             r#"
                 [[stages]]
-                    # todo: Reconsider exposing the state like this
                     count = 0
                     iterations = { "Limited" = 10 }
                     

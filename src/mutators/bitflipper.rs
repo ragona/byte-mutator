@@ -1,3 +1,5 @@
+//! Performs a walking bit flip of `width` bits. A width of 1 will flip a single bit.
+
 #[derive(Debug, Copy, Clone)]
 pub struct BitFlipper {}
 

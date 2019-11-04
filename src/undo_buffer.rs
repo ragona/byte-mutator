@@ -1,3 +1,9 @@
+//! UndoBuffer is a structure for efficiently undoing changes. It maintains two fixed size
+//! ArrayVec structures, exposes interfaces to mutate the write buffer, and then undo methods
+//! to restore the buffer to its original state.
+//!
+//! todo: Variably sized buffers.
+
 use arrayvec::ArrayVec;
 use std::cmp::min;
 use std::io::Write;
@@ -6,9 +12,12 @@ use std::io::Write;
 const DEFAULT_BUFFER_SIZE: usize = 1024;
 
 #[derive(Debug, Clone)]
+/// Fixed size buffer with an original state and a writeable buffer. Tracks which region of the
+/// buffer has been exposed for changes and enables an undo of those changes.
 pub struct UndoBuffer {
     buffer: ArrayVec<[u8; DEFAULT_BUFFER_SIZE]>,
     original: ArrayVec<[u8; DEFAULT_BUFFER_SIZE]>,
+    // todo: Track dirty regions exposed by get_mut or get_mut_range
 }
 
 impl UndoBuffer {

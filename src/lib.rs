@@ -1,3 +1,22 @@
+//! # Byte Mutator
+//!
+//! `byte-mutator` is a crate for defining a set of rules by which to mutate byte arrays. It
+//! contains two main primitives: Stages, and Mutators. A Stage defines how many iterations
+//! to run via the Iterations enum, and a Mutator defines which MutatorType to perform across
+//! which range of bytes.
+//!
+//!`byte-mutator` internally uses an UndoBuffer, which is a data structure that exposes mutable
+//! &[u8] slices, and can undo changes in order to reset and perform another mutation from the
+//! clean starting state provided at initialization. This is important to avoid utterly mangling
+//! the input; we want to identify small novel changes that produce a different output from the
+//! target program, and then reuse that new state to perform further mutations.
+//!
+//! ```
+//! use byte_mutator::*;
+//!
+//!
+//! ```
+
 use serde_derive::Deserialize;
 
 use crate::fuzz_config::FuzzConfig;

@@ -1,8 +1,12 @@
 [[stages]]
+    # Iteration count at which to start the loop (useful for starting over from a future state)
     count = 0
+    # Optional range to limit the number of times that this stage runs
     iterations = "Bytes"
 
-    # a list of mutations to perform on this stage
+    # A list of mutations to perform on this stage
     [[stages.mutations]]
+    # Must be a variant of the MutatorTypes enum
     mutation = {"BitFlipper" = {width = 1}}
+    # Optional range to limit the mutation to a subslice
     range = [0, 10]     

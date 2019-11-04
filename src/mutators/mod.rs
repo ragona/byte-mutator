@@ -1,5 +1,26 @@
-use crate::mutators::bitflipper::BitFlipper;
+//! This module contains the available mutators.
+//!
+//! # Example
+//! ```
+//! use byte_mutator::mutators::Mutation;
+//! use byte_mutator::mutators::MutatorType::BitFlipper;
+//!
+//! let bitflipper = Mutation{
+//!     range: None,
+//!     mutation: BitFlipper {width: 1}
+//! };
+//!
+//! let mut bytes = b"foo".to_vec();
+//!
+//! bitflipper.mutate(&mut bytes, 0);
+//!
+//! assert_eq!(&bytes, b"goo");
+//! ```
+
 use serde_derive::Deserialize;
+
+use crate::mutators::bitflipper::BitFlipper;
+
 pub mod bitflipper;
 
 #[derive(Debug, Deserialize, Clone)]
@@ -8,8 +29,11 @@ pub enum MutatorType {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+/// A single Mutation, optionally scoped to only operate on a subslice
 pub struct Mutation {
+    /// Optional subslice range (e.g. Some(0, 3) only mutates the first three bytes)
     pub range: Option<(usize, usize)>,
+    /// Type of mutator (e.g. MutatorType::BitFlipper)
     pub mutation: MutatorType,
 }
 
@@ -22,10 +46,13 @@ impl Mutation {
     }
 }
 
+/// Maps a MutationType to a specific function call.
 impl Mutation {
-    pub fn mutate(&mut self, bytes: &mut [u8], i: usize) -> (usize, usize) {
+    /// Execute the mutation
+    pub fn mutate(&self, bytes: &mut [u8], i: usize) -> (usize, usize) {
         match self.mutation {
             MutatorType::BitFlipper { width } => BitFlipper::mutate(bytes, i, width),
+            // todo: Closure type bitflipper?
         }
     }
 }
