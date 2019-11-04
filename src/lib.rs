@@ -124,7 +124,7 @@ impl ByteMutator {
 
         // todo: ranged undo
         // we reset the last change first so that we're getting small changes not huge ones
-        self.bytes.undo_all();
+        self.bytes.undo();
 
         let stage = &mut self.stages[0];
         for mutation in &mut stage.mutations {
@@ -140,7 +140,7 @@ impl ByteMutator {
 
         if stage.is_done(self.bytes.len()) {
             self.stages.drain(..1); // todo: Is this right?
-            self.bytes.undo_all();
+            self.bytes.undo();
         }
     }
 
@@ -152,42 +152,7 @@ impl ByteMutator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mutators::bitflipper::BitFlipper;
     use crate::mutators::MutatorType;
-
-    #[test]
-    fn mutate_and_reset() {
-        let mut buffer = UndoBuffer::new(b"foo");
-
-        // first bit should flip resulting in 'goo'
-        // 0b1100110 -> 0b1100111, 103 -> 102, f -> g
-        BitFlipper::mutate(buffer.get_mut(), 0, 1);
-        assert_eq!(buffer.read(), b"goo");
-
-        // should be back to 'foo'
-        buffer.undo_all();
-        assert_eq!(buffer.read(), b"foo");
-    }
-
-    #[test]
-    fn mutate_reset_range() {
-        // clamp changes to the last byte
-        let (min, max) = (2, 3);
-        let mut buffer = undo_buffer::UndoBuffer::new(b"foo");
-        let range = buffer.get_mut_range(min, max);
-
-        // flip a bit
-        let (start, end) = BitFlipper::mutate(range, 0, 1);
-
-        // assert that something changed
-        assert_ne!(buffer.read()[0..3], b"foo"[..]);
-
-        // set it back
-        buffer.undo_range(min + start, min + end);
-
-        // make sure we match
-        assert_eq!(buffer.read()[0..3], b"foo"[..]);
-    }
 
     #[test]
     fn mutator_stage() {
@@ -197,10 +162,15 @@ mod tests {
         stage.add_mutation(Mutation::new(MutatorType::BitFlipper { width: 1 }, None));
         byte_mutator.add_stage(stage);
 
-        for _ in 0..20 {
+        assert_eq!(byte_mutator.remaining_stages(), 1);
+
+        for _ in 0..10 {
             byte_mutator.next();
         }
+
+        assert_eq!(byte_mutator.remaining_stages(), 0);
     }
+
     #[test]
     fn mutator_from_config() {
         let mut mutator = ByteMutator::new_from_config(b"foo", FuzzConfig::default());

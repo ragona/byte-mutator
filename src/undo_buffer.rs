@@ -5,7 +5,7 @@
 //! todo: Variably sized buffers.
 
 use arrayvec::ArrayVec;
-use std::cmp::min;
+use std::cmp::{max, min};
 use std::io::Write;
 
 // todo fix -- env var?
@@ -17,7 +17,7 @@ const DEFAULT_BUFFER_SIZE: usize = 1024;
 pub struct UndoBuffer {
     buffer: ArrayVec<[u8; DEFAULT_BUFFER_SIZE]>,
     original: ArrayVec<[u8; DEFAULT_BUFFER_SIZE]>,
-    // todo: Track dirty regions exposed by get_mut or get_mut_range
+    dirty: Option<(usize, usize)>,
 }
 
 impl UndoBuffer {
@@ -33,7 +33,11 @@ impl UndoBuffer {
             .write_all(buf)
             .expect("Failed to copy into UndoBuffer");
 
-        UndoBuffer { original, buffer }
+        UndoBuffer {
+            original,
+            buffer,
+            dirty: None,
+        }
     }
 
     pub fn len(&self) -> usize {
@@ -45,20 +49,23 @@ impl UndoBuffer {
     }
 
     pub fn get_mut(&mut self) -> &mut [u8] {
+        self.dirty = Some((0, self.buffer.len()));
         &mut self.buffer[..]
     }
 
     pub fn get_mut_range(&mut self, start: usize, end: usize) -> &mut [u8] {
+        // protect against running off the end of the buffer
         let end = min(self.buffer.len(), end);
+        match self.dirty {
+            Some(range) => {
+                // expand to cover range
+                self.dirty = Some((min(range.0, start), max(range.1, end)));
+            }
+            None => {
+                self.dirty = Some((start, end));
+            }
+        }
         &mut self.buffer[start..end]
-    }
-
-    pub fn undo_range(&mut self, start: usize, end: usize) {
-        let end = min(self.buffer.len(), end);
-        let mut changed = &mut self.buffer[start..end];
-        let original = &mut self.original[start..end];
-
-        changed.write_all(&original).expect("Failed to undo range");
     }
 
     pub fn read(&self) -> &[u8] {
@@ -66,10 +73,56 @@ impl UndoBuffer {
     }
 
     /// Undo all changes and set the readable buffer back to the original state
-    pub fn undo_all(&mut self) {
-        // note: we need to take a slice of self.buffer here or we write after the existing bytes
-        (&mut self.buffer[..])
-            .write_all(&self.original[..])
+    pub fn undo(&mut self) {
+        let (start, end) = match self.dirty {
+            None => {
+                return; // no-op
+            }
+            Some(range) => range,
+        };
+
+        (&mut self.buffer[start..end])
+            .write_all(&self.original[start..end])
             .expect("Failed to write");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::mutators::bitflipper::BitFlipper;
+
+    #[test]
+    fn mutate_and_reset() {
+        let mut buffer = UndoBuffer::new(b"foo");
+
+        // first bit should flip resulting in 'goo'
+        // 0b1100110 -> 0b1100111, 103 -> 102, f -> g
+        BitFlipper::mutate(buffer.get_mut(), 0, 1);
+        assert_eq!(buffer.read(), b"goo");
+
+        // should be back to 'foo'
+        buffer.undo();
+        assert_eq!(buffer.read(), b"foo");
+    }
+
+    #[test]
+    fn mutate_reset_range() {
+        // clamp changes to the last byte
+        let (min, max) = (2, 3);
+        let mut buffer = UndoBuffer::new(b"foo");
+        let range = buffer.get_mut_range(min, max);
+
+        // flip a bit
+        BitFlipper::mutate(range, 0, 1);
+
+        // assert that something changed
+        assert_ne!(buffer.read()[0..3], b"foo"[..]);
+
+        // set it back
+        buffer.undo();
+
+        // make sure we match
+        assert_eq!(buffer.read()[0..3], b"foo"[..]);
     }
 }
