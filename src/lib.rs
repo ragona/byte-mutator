@@ -94,14 +94,14 @@ impl ByteMutator {
     }
 
     pub fn next(&mut self) {
-        // todo: ranged undo
-        // we reset the last change first so that we're getting small changes not huge ones
-        self.bytes.undo_all();
-
         // nothing to do
         if self.stages.len() == 0 {
             return;
         }
+
+        // todo: ranged undo
+        // we reset the last change first so that we're getting small changes not huge ones
+        self.bytes.undo_all();
 
         let stage = &mut self.stages[0];
         for mutation in &mut stage.mutations {
@@ -117,6 +117,7 @@ impl ByteMutator {
 
         if stage.is_done(self.bytes.len()) {
             self.stages.drain(..1); // todo: Is this right?
+            self.bytes.undo_all();
         }
     }
 
