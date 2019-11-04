@@ -35,12 +35,7 @@ impl Stage {
     }
 
     pub fn next(&mut self) {
-        match self.max_iterations {
-            0 => (),
-            _ => {
-                self.cur_iterations += 1;
-            }
-        }
+        self.cur_iterations += 1;
     }
 
     pub fn add_mutation(&mut self, mutation: Mutation) {
@@ -101,6 +96,7 @@ impl ByteMutator {
         }
 
         stage.next();
+
         if stage.is_done() {
             self.stages.drain(..1); // todo: Is this right?
         }
@@ -165,6 +161,11 @@ mod tests {
     #[test]
     fn mutator_from_config() {
         let mut mutator = ByteMutator::new_from_config(b"foo", FuzzConfig::default());
-        assert!(mutator.remaining_stages() > 1);
+
+        for _ in 0..20 {
+            mutator.next();
+        }
+
+        assert!(mutator.remaining_stages() >= 1);
     }
 }
