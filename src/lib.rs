@@ -3,6 +3,7 @@ use arrayvec;
 use crate::fuzz_config::FuzzConfig;
 use crate::mutators::{Mutation, MutatorType};
 use crate::undo_buffer::UndoBuffer;
+use crate::Iterations::Unlimited;
 use serde_derive::Deserialize;
 use std::cmp::max;
 
@@ -10,32 +11,49 @@ pub mod fuzz_config;
 pub mod mutators;
 pub mod undo_buffer;
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Clone, Debug, Deserialize)]
+pub enum Iterations {
+    Bits,
+    Bytes,
+    Unlimited,
+    Limited(usize),
+}
+
+#[derive(Clone, Debug, Deserialize)]
 pub struct Stage {
-    cur_iterations: usize,
-    max_iterations: usize,
+    count: usize,
+    iterations: Iterations,
     mutations: Vec<Mutation>,
 }
 
 impl Stage {
-    pub fn new(max_iterations: usize) -> Stage {
+    pub fn new() -> Stage {
         Stage {
-            max_iterations,
-            cur_iterations: 0,
+            count: 0,
             mutations: vec![],
+            iterations: Unlimited,
         }
     }
 
-    pub fn is_done(&self) -> bool {
-        match self.max_iterations {
-            // no figured max means go forever
-            0 => false,
-            _ => self.cur_iterations >= self.max_iterations,
+    pub fn limited(limit: usize) -> Stage {
+        Stage {
+            count: 0,
+            mutations: vec![],
+            iterations: Iterations::Limited(limit),
+        }
+    }
+
+    pub fn is_done(&self, num_bytes: usize) -> bool {
+        match self.iterations {
+            Iterations::Bits => self.count >= num_bytes * 8,
+            Iterations::Bytes => self.count >= num_bytes,
+            Iterations::Limited(n) => self.count >= n,
+            Unlimited => false,
         }
     }
 
     pub fn next(&mut self) {
-        self.cur_iterations += 1;
+        self.count += 1;
     }
 
     pub fn add_mutation(&mut self, mutation: Mutation) {
@@ -89,15 +107,15 @@ impl ByteMutator {
         for mutation in &mut stage.mutations {
             match mutation.range {
                 Some((start, end)) => {
-                    mutation.mutate(self.bytes.get_mut_range(start, end), stage.cur_iterations)
+                    mutation.mutate(self.bytes.get_mut_range(start, end), stage.count)
                 }
-                None => mutation.mutate(self.bytes.as_mut(), stage.cur_iterations),
+                None => mutation.mutate(self.bytes.as_mut(), stage.count),
             };
         }
 
         stage.next();
 
-        if stage.is_done() {
+        if stage.is_done(self.bytes.len()) {
             self.stages.drain(..1); // todo: Is this right?
         }
     }
@@ -149,7 +167,7 @@ mod tests {
     #[test]
     fn mutator_stage() {
         let mut byte_mutator = ByteMutator::new(b"foo");
-        let mut stage = Stage::new(10);
+        let mut stage = Stage::limited(10);
 
         stage.add_mutation(Mutation::new(MutatorType::BitFlipper { width: 1 }, None));
         byte_mutator.add_stage(stage);

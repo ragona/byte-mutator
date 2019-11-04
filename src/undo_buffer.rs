@@ -24,6 +24,10 @@ impl UndoBuffer {
         UndoBuffer { original, buffer }
     }
 
+    pub fn len(&self) -> usize {
+        self.buffer.len()
+    }
+
     pub fn as_mut(&mut self) -> &mut [u8] {
         &mut self.buffer[..]
     }

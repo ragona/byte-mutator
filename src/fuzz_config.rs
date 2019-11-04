@@ -1,5 +1,5 @@
 use crate::mutators::{Mutation, MutatorType};
-use crate::{ByteMutator, Stage};
+use crate::{ByteMutator, Iterations, Stage};
 use serde_derive::Deserialize;
 use std::fs;
 use std::io::{self, Error};
@@ -15,8 +15,8 @@ impl FuzzConfig {
     pub fn default() -> FuzzConfig {
         FuzzConfig {
             stages: vec![Stage {
-                cur_iterations: 0,
-                max_iterations: 0,
+                count: 0,
+                iterations: Iterations::Unlimited,
                 mutations: vec![Mutation {
                     range: None,
                     mutation: MutatorType::BitFlipper { width: 1 },
@@ -48,8 +48,8 @@ mod tests {
             r#"
                 [[stages]]
                     # todo: Reconsider exposing the state like this
-                    cur_iterations = 0
-                    max_iterations = 100
+                    count = 0
+                    iterations = { "Limited" = 10 }
                     
                     # a list of mutations to perform on this stage
                     [[stages.mutations]]
