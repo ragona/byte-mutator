@@ -1,29 +1,30 @@
 # byte-mutator
+`byte-mutator` is a crate for defining a set of rules by which to mutate byte arrays. It's intented to be used as part
+of a fuzzing workflow to configure how you want your input mutated. For example, you might want to do one pass where 
+you don't mess with the header of your message, and you only mutate the body -- or you could mutate them differently. 
 
-`byte-mutator` is a library for defining and manipulating sequences of bytes. Define an initial state, and a set of rules of mutating that state.
+## Example 
+This is an example of a mutator configured to flip bits forever. 
+```toml
+[[stages]]
+    # Iteration count at which to start the loop (useful for starting over from a future state)
+    count = 0
+    # Optional range to limit the number of times that this stage runs
+    iterations = "Unlimited"
 
-Define an underlying sequence of bytes, then rules for mutating sections 
-
-## Questions: 
-1. What if it grows/shrinks? 
-
-## Notes 
-
-### HTTP Example 
-
-## UDP Packet
-
-source
+    # A list of mutations to perform on this stage
+    [[stages.mutations]]
+        # Must be a variant of the MutatorTypes enum
+        mutation = {"BitFlipper" = {width = 1 }}
 ```
-length: Length::Fixed(16) 
+
+```rust
+let mut bytes = ByteMutator::new_from_config(b"foo", FuzzConfig::from_file("config.toml"));
+
+for _ in 0..20 {
+    // this advances the state by one step
+    bytes.next();
+    // each time this will be one bit different from the original
+    dbg!(bytes.read());
+}
 ```
-
-
-
-dest: u16
-length: u16
-checksum: u16
-data: 100
-
-
-

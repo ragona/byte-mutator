@@ -12,9 +12,6 @@
 //! target program, and then reuse that new state to perform further mutations.
 //!
 //! ```
-//! use byte_mutator::*;
-//!
-//!
 //! ```
 use serde_derive::Deserialize;
 
@@ -52,6 +49,7 @@ pub struct Stage {
 }
 
 impl Stage {
+    /// Creates a new `Stage`
     pub fn new(count: usize, mutations: Vec<Mutation>, iterations: Iterations) -> Self {
         Self {
             count,
@@ -60,6 +58,7 @@ impl Stage {
         }
     }
 
+    /// Returns whether the stage is complete
     pub fn is_done(&self, num_bytes: usize) -> bool {
         match self.iterations {
             Iterations::Bits => self.count >= num_bytes * 8,
@@ -69,25 +68,31 @@ impl Stage {
         }
     }
 
+    /// Advances the internal state of the `Stage`
     pub fn next(&mut self) {
         self.count += 1;
     }
 
+    /// Add a mutation
     pub fn add_mutation(&mut self, mutation: Mutation) {
         self.mutations.push(mutation);
     }
 }
 
 impl Default for Stage {
+    /// Default `Stage` with no mutations and unlimited iterations
     fn default() -> Self {
         Stage::new(0, vec![], Iterations::Unlimited)
     }
 }
 
+/// A fixed size buffer with a defined set of stages of mutations that will be applied to the buffer
 #[derive(Debug, Clone)]
 pub struct ByteMutator {
     bytes: UndoBuffer,
+    /// Queue of outstanding stages, ordered from first to last. Drains from the front.
     stages: Vec<Stage>,
+    /// The in-progress stage.
     cur_stage: usize,
 }
 
@@ -99,6 +104,11 @@ impl ByteMutator {
             stages: vec![],
             cur_stage: 0,
         }
+    }
+
+    pub fn with_stages(mut self, stages: Vec<Stage>) -> Self {
+        self.stages = stages;
+        self
     }
 
     /// Creates a new `ByteMutator` and consumes the `stages` configured in `config`
@@ -143,7 +153,7 @@ impl ByteMutator {
         stage.next();
 
         if stage.is_done(self.bytes.len()) {
-            self.stages.drain(..1); // todo: Is this right?
+            self.stages.drain(..1);
             self.bytes.undo();
         }
     }
@@ -184,12 +194,34 @@ mod tests {
 
     #[test]
     fn mutator_from_config() {
-        let mut mutator = ByteMutator::new_from_config(b"foo", FuzzConfig::default());
+        let mut bytes = ByteMutator::new_from_config(b"foo", FuzzConfig::default());
 
         for _ in 0..20 {
-            mutator.next();
+            bytes.next();
         }
 
-        assert!(mutator.remaining_stages() >= 1);
+        assert!(bytes.remaining_stages() >= 1);
+    }
+
+    #[test]
+    fn mutator() {
+        let mut bytes = ByteMutator::new(b"foo").with_stages(vec![Stage {
+            count: 0,
+            iterations: Iterations::Bits,
+            mutations: vec![Mutation {
+                range: None,
+                mutation: MutatorType::BitFlipper { width: 1 },
+            }],
+        }]);
+
+        // Bytes in their original state
+        assert_eq!(bytes.read(), b"foo");
+
+        // Advance the mutation
+        bytes.next();
+
+        // We've flipped the first bit (little endian)
+        // 0b1100110 -> 0b1100111, 103 -> 102, f -> g
+        assert_eq!(bytes.read(), b"goo");
     }
 }
