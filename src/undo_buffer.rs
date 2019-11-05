@@ -1,5 +1,5 @@
-//! UndoBuffer is a structure for efficiently undoing changes. It maintains two fixed size
-//! ArrayVec structures, exposes interfaces to mutate the write buffer, and then undo methods
+//! `UndoBuffer` is a structure for efficiently undoing changes. It maintains two fixed size
+//! `ArrayVec` structures, exposes interfaces to mutate the write buffer, and then undo methods
 //! to restore the buffer to its original state.
 //!
 //! todo: Variably sized buffers.
@@ -56,15 +56,14 @@ impl UndoBuffer {
     pub fn get_mut_range(&mut self, start: usize, end: usize) -> &mut [u8] {
         // protect against running off the end of the buffer
         let end = min(self.buffer.len(), end);
-        match self.dirty {
+        self.dirty = match self.dirty {
             Some(range) => {
                 // expand to cover range
-                self.dirty = Some((min(range.0, start), max(range.1, end)));
+                Some((min(range.0, start), max(range.1, end)))
             }
-            None => {
-                self.dirty = Some((start, end));
-            }
-        }
+            None => Some((start, end)),
+        };
+
         &mut self.buffer[start..end]
     }
 

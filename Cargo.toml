@@ -6,6 +6,9 @@ edition = "2018"
 description = "Library to define staged mutations for a series of bytes"
 license = "MIT"
 repository = "https://github.com/ragona/byte-mutator"
+keywords = ["fuzz", "fuzzing", "mutation", "mutator", "bytes"]
+categories = ["fuzzing"]
+readme = "README.md"
 
 [dependencies]
 arrayvec = "0.5.1"

@@ -29,7 +29,7 @@ pub enum MutatorType {
 }
 
 #[derive(Debug, Deserialize, Clone)]
-/// A single Mutation, optionally scoped to only operate on a subslice
+/// A single mutation, optionally scoped to only operate on a subslice
 pub struct Mutation {
     /// Optional subslice range (e.g. Some(0, 3) only mutates the first three bytes)
     pub range: Option<(usize, usize)>,
@@ -38,16 +38,14 @@ pub struct Mutation {
 }
 
 impl Mutation {
-    pub fn new(mutator_type: MutatorType, range: Option<(usize, usize)>) -> Mutation {
-        Mutation {
+    /// Create a new `Mutation`, optionally scoped to operate only on a subslice
+    pub const fn new(mutator_type: MutatorType, range: Option<(usize, usize)>) -> Self {
+        Self {
             range,
             mutation: mutator_type,
         }
     }
-}
 
-/// Maps a MutationType to a specific function call.
-impl Mutation {
     /// Execute the mutation
     pub fn mutate(&self, bytes: &mut [u8], i: usize) -> (usize, usize) {
         match self.mutation {

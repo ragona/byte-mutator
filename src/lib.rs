@@ -1,12 +1,20 @@
+#![warn(
+//    clippy::all,
+//    clippy::restriction,
+    clippy::pedantic,
+//    clippy::nursery,
+//    clippy::cargo
+)]
+
 //! # Byte Mutator
 //!
 //! `byte-mutator` is a crate for defining a set of rules by which to mutate byte arrays. It
-//! contains two main primitives: Stages, and Mutators. A Stage defines how many iterations
-//! to run via the Iterations enum, and a Mutator defines which MutatorType to perform across
+//! contains two main primitives: `Stage`, and `Mutator`. A `Stage` defines how many iterations
+//! to run via the `Iterations` enum, and a `Mutator` defines which `MutatorType` to perform across
 //! which range of bytes.
 //!
-//!`byte-mutator` internally uses an UndoBuffer, which is a data structure that exposes mutable
-//! &[u8] slices, and can undo changes in order to reset and perform another mutation from the
+//!`byte-mutator` internally uses an `UndoBuffer`, which is a data structure that exposes mutable
+//! `&[u8]` slices, and can undo changes in order to reset and perform another mutation from the
 //! clean starting state provided at initialization. This is important to avoid utterly mangling
 //! the input; we want to identify small novel changes that produce a different output from the
 //! target program, and then reuse that new state to perform further mutations.
@@ -44,16 +52,16 @@ pub struct Stage {
 }
 
 impl Stage {
-    pub fn new() -> Stage {
-        Stage {
+    pub fn new() -> Self {
+        Self {
             count: 0,
             mutations: vec![],
             iterations: Unlimited,
         }
     }
 
-    pub fn limited(limit: usize) -> Stage {
-        Stage {
+    pub fn limited(limit: usize) -> Self {
+        Self {
             count: 0,
             mutations: vec![],
             iterations: Iterations::Limited(limit),
@@ -92,41 +100,45 @@ pub struct ByteMutator {
 }
 
 impl ByteMutator {
-    pub fn new(bytes: &[u8]) -> ByteMutator {
-        ByteMutator {
+    /// Create a new `ByteMutator` from the provided byte slice. Copies into two internal buffers.
+    pub fn new(bytes: &[u8]) -> Self {
+        Self {
             bytes: UndoBuffer::new(bytes),
             stages: vec![],
             cur_stage: 0,
         }
     }
 
-    pub fn new_from_config(bytes: &[u8], config: FuzzConfig) -> ByteMutator {
-        ByteMutator {
+    /// Creates a new `ByteMutator` and consumes the `stages` configured in `config`
+    pub fn new_from_config(bytes: &[u8], config: FuzzConfig) -> Self {
+        Self {
             bytes: UndoBuffer::new(bytes),
             stages: config.stages,
             cur_stage: 0,
         }
     }
 
+    /// Number of outstanding stages
     pub fn remaining_stages(&self) -> usize {
         self.stages.len()
     }
 
+    /// Add a stage
     pub fn add_stage(&mut self, stage: Stage) {
         self.stages.push(stage);
     }
 
+    /// Advance the mutation one step. Resets outstanding changes, advances the stage state,
+    /// and mutates using all mutators defined in the stage.
     pub fn next(&mut self) {
-        // nothing to do
-        if self.stages.is_empty() {
-            return;
-        }
+        let stage = match self.stages.get_mut(0) {
+            None => return, // nothing to do
+            Some(s) => s,
+        };
 
-        // todo: ranged undo
         // we reset the last change first so that we're getting small changes not huge ones
         self.bytes.undo();
 
-        let stage = &mut self.stages[0];
         for mutation in &mut stage.mutations {
             match mutation.range {
                 Some((start, end)) => {
@@ -144,6 +156,8 @@ impl ByteMutator {
         }
     }
 
+    /// Returns an immutable slice of the mutable buffer.
+    /// Exposes the current state of the `ByteMutator`.
     pub fn read(&self) -> &[u8] {
         self.bytes.read()
     }

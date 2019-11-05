@@ -1,5 +1,5 @@
-//! Deserializes a .toml config into a FuzzConfig object that can be used to configure a
-//! ByteMutator. See tests for examples.
+//! Deserializes a .toml config into a `FuzzConfig` object that can be used to configure a
+//! `ByteMutator`. See tests for examples.
 
 use crate::mutators::{Mutation, MutatorType};
 use crate::{Iterations, Stage};
@@ -10,13 +10,15 @@ use std::io::{self, Error};
 use toml;
 
 #[derive(Deserialize, Debug, Clone)]
+/// A struct that can be deserialized from .toml.
+/// Creates and configures `Stage` and `Mutator` objects.
 pub struct FuzzConfig {
     pub stages: Vec<Stage>,
 }
 
 impl FuzzConfig {
-    pub fn default() -> FuzzConfig {
-        FuzzConfig {
+    pub fn default() -> Self {
+        Self {
             stages: vec![Stage {
                 count: 0,
                 iterations: Iterations::Unlimited,
