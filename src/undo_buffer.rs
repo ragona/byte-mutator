@@ -1,6 +1,7 @@
-//! `UndoBuffer` is a structure for efficiently undoing changes. It maintains two fixed size
-//! `ArrayVec` structures, exposes interfaces to mutate the write buffer, and then undo methods
-//! to restore the buffer to its original state.
+//! `UndoBuffer` is a structure that is used to expose an 'undo' interface to a fixed size buffer.
+//! It internally maintains two fixed size `ArrayVec` structures. These arrays are identical on
+//! construction, but only one can be written to. `UndoBuffer` keeps track of which areas of the
+//! buffer have been mutably borrowed, and can then reset the buffer back to its original state.
 //!
 //! todo: Variably sized buffers.
 
@@ -21,7 +22,7 @@ pub struct UndoBuffer {
 }
 
 impl UndoBuffer {
-    pub fn new(buf: &[u8]) -> UndoBuffer {
+    pub fn new(buf: &[u8]) -> Self {
         let mut original = ArrayVec::<[u8; DEFAULT_BUFFER_SIZE]>::new();
         let mut buffer = ArrayVec::<[u8; DEFAULT_BUFFER_SIZE]>::new();
 
@@ -33,26 +34,31 @@ impl UndoBuffer {
             .write_all(buf)
             .expect("Failed to copy into UndoBuffer");
 
-        UndoBuffer {
+        Self {
             original,
             buffer,
             dirty: None,
         }
     }
 
+    /// Used length of the writable buffer
     pub fn len(&self) -> usize {
         self.buffer.len()
     }
 
+    /// Whether the writable buffer is empty
     pub fn is_empty(&self) -> bool {
         self.buffer.len() == 0
     }
 
+    /// Returns a full mutable slice of the write buffer, and marks the entire thing as dirty.
     pub fn get_mut(&mut self) -> &mut [u8] {
         self.dirty = Some((0, self.buffer.len()));
         &mut self.buffer[..]
     }
 
+    /// Returns a mutable subslice of the buffer.
+    /// Marks that region as dirty for future undo operations.
     pub fn get_mut_range(&mut self, start: usize, end: usize) -> &mut [u8] {
         // protect against running off the end of the buffer
         let end = min(self.buffer.len(), end);
@@ -67,11 +73,12 @@ impl UndoBuffer {
         &mut self.buffer[start..end]
     }
 
+    /// Returns an immutable reference to the buffer in its current state
     pub fn read(&self) -> &[u8] {
         &self.buffer[..]
     }
 
-    /// Undo all changes and set the readable buffer back to the original state
+    /// Undo all changes and set the write/readable buffer back to the original state
     pub fn undo(&mut self) {
         let (start, end) = match self.dirty {
             None => {

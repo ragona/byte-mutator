@@ -25,6 +25,7 @@ pub mod bitflipper;
 
 #[derive(Debug, Deserialize, Clone)]
 pub enum MutatorType {
+    /// Flips `width` number of bits.
     BitFlipper { width: u8 },
 }
 

@@ -1,11 +1,3 @@
-#![warn(
-//    clippy::all,
-//    clippy::restriction,
-    clippy::pedantic,
-//    clippy::nursery,
-//    clippy::cargo
-)]
-
 //! # Byte Mutator
 //!
 //! `byte-mutator` is a crate for defining a set of rules by which to mutate byte arrays. It
@@ -24,47 +16,47 @@
 //!
 //!
 //! ```
-
 use serde_derive::Deserialize;
 
 use crate::fuzz_config::FuzzConfig;
 use crate::mutators::Mutation;
 use crate::undo_buffer::UndoBuffer;
-use crate::Iterations::Unlimited;
 
 pub mod fuzz_config;
 pub mod mutators;
 pub mod undo_buffer;
 
+/// Used to limit the number of iterations in a `Stage`.
 #[derive(Clone, Debug, Deserialize)]
 pub enum Iterations {
+    /// One iteration per bit in slice
     Bits,
+    /// One iteration per byte in slice
     Bytes,
+    /// Goes forever
     Unlimited,
+    /// Fixed number of iterations
     Limited(usize),
 }
 
+/// Used to define groups of mutations, and how many mutations should be performed.
 #[derive(Clone, Debug, Deserialize)]
 pub struct Stage {
+    /// Current number of iterations.
+    /// This can start at > 0 if you want to reproduce something from an earlier run.
     count: usize,
+    /// Max number of iterations
     iterations: Iterations,
+    /// Group of mutations, all of which are performed every time.
     mutations: Vec<Mutation>,
 }
 
 impl Stage {
-    pub fn new() -> Self {
+    pub fn new(count: usize, mutations: Vec<Mutation>, iterations: Iterations) -> Self {
         Self {
-            count: 0,
-            mutations: vec![],
-            iterations: Unlimited,
-        }
-    }
-
-    pub fn limited(limit: usize) -> Self {
-        Self {
-            count: 0,
-            mutations: vec![],
-            iterations: Iterations::Limited(limit),
+            count,
+            mutations,
+            iterations,
         }
     }
 
@@ -73,7 +65,7 @@ impl Stage {
             Iterations::Bits => self.count >= num_bytes * 8,
             Iterations::Bytes => self.count >= num_bytes,
             Iterations::Limited(n) => self.count >= n,
-            Unlimited => false,
+            Iterations::Unlimited => false,
         }
     }
 
@@ -88,7 +80,7 @@ impl Stage {
 
 impl Default for Stage {
     fn default() -> Self {
-        Stage::new()
+        Stage::new(0, vec![], Iterations::Unlimited)
     }
 }
 
@@ -171,10 +163,15 @@ mod tests {
     #[test]
     fn mutator_stage() {
         let mut byte_mutator = ByteMutator::new(b"foo");
-        let mut stage = Stage::limited(10);
 
-        stage.add_mutation(Mutation::new(MutatorType::BitFlipper { width: 1 }, None));
-        byte_mutator.add_stage(stage);
+        byte_mutator.add_stage(Stage::new(
+            0,
+            vec![Mutation {
+                range: None,
+                mutation: MutatorType::BitFlipper { width: 1 },
+            }],
+            Iterations::Limited(10),
+        ));
 
         assert_eq!(byte_mutator.remaining_stages(), 1);
 

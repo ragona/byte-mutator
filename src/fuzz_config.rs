@@ -30,7 +30,7 @@ impl FuzzConfig {
         }
     }
 
-    pub fn from_file(path: &str) -> std::io::Result<FuzzConfig> {
+    pub fn from_file(path: &str) -> std::io::Result<Self> {
         match fs::read_to_string(path) {
             Ok(s) => match toml::from_str(&s) {
                 Ok(c) => Ok(c),
