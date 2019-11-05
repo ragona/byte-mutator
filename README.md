@@ -28,3 +28,24 @@ for _ in 0..20 {
     dbg!(bytes.read());
 }
 ```
+
+## Release History
+
+* 0.1.0
+    * Initial release
+
+## Meta
+
+Ryan Ragona – [@ryanragona](https://twitter.com/ryanragona) – [https://github.com/ragona](https://github.com/ragona/)
+
+Distributed under the MTT license. See ``LICENSE`` for more information.
+
+## Contributing
+Always happy to see PRs or Issues. 
+
+To contribute: 
+1. Fork it (<https://github.com/ragona/yourproject/byte-mutator>)
+2. Create your feature branch (`git checkout -b feature/fooBar`)
+3. Commit your changes (`git commit -am 'Add some fooBar'`)
+4. Push to the branch (`git push origin feature/fooBar`)
+5. Create a new Pull Requesti
