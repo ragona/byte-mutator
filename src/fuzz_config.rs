@@ -1,7 +1,7 @@
 //! Deserializes a .toml config into a `FuzzConfig` object that can be used to configure a
 //! `ByteMutator`. See tests for examples.
 
-use crate::mutators::{Mutation, MutatorType};
+use crate::mutators::{Mutation, MutationType};
 use crate::{Iterations, Stage};
 
 use serde_derive::Deserialize;
@@ -24,7 +24,7 @@ impl FuzzConfig {
                 iterations: Iterations::Unlimited,
                 mutations: vec![Mutation {
                     range: None,
-                    mutation: MutatorType::BitFlipper { width: 1 },
+                    mutation: MutationType::BitFlipper { width: 1 },
                 }],
             }],
         }

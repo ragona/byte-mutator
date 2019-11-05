@@ -15,9 +15,9 @@
 //! ```
 use serde_derive::Deserialize;
 
-use crate::fuzz_config::FuzzConfig;
-use crate::mutators::Mutation;
-use crate::undo_buffer::UndoBuffer;
+pub use crate::fuzz_config::FuzzConfig;
+pub use crate::mutators::{Mutation, MutationType};
+pub use crate::undo_buffer::UndoBuffer;
 
 pub mod fuzz_config;
 pub mod mutators;
@@ -41,11 +41,11 @@ pub enum Iterations {
 pub struct Stage {
     /// Current number of iterations.
     /// This can start at > 0 if you want to reproduce something from an earlier run.
-    count: usize,
+    pub count: usize,
     /// Max number of iterations
-    iterations: Iterations,
+    pub iterations: Iterations,
     /// Group of mutations, all of which are performed every time.
-    mutations: Vec<Mutation>,
+    pub mutations: Vec<Mutation>,
 }
 
 impl Stage {
@@ -168,7 +168,7 @@ impl ByteMutator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mutators::MutatorType;
+    use crate::mutators::MutationType;
 
     #[test]
     fn mutator_stage() {
@@ -178,7 +178,7 @@ mod tests {
             0,
             vec![Mutation {
                 range: None,
-                mutation: MutatorType::BitFlipper { width: 1 },
+                mutation: MutationType::BitFlipper { width: 1 },
             }],
             Iterations::Limited(10),
         ));
@@ -190,38 +190,5 @@ mod tests {
         }
 
         assert_eq!(byte_mutator.remaining_stages(), 0);
-    }
-
-    #[test]
-    fn mutator_from_config() {
-        let mut bytes = ByteMutator::new_from_config(b"foo", FuzzConfig::default());
-
-        for _ in 0..20 {
-            bytes.next();
-        }
-
-        assert!(bytes.remaining_stages() >= 1);
-    }
-
-    #[test]
-    fn mutator() {
-        let mut bytes = ByteMutator::new(b"foo").with_stages(vec![Stage {
-            count: 0,
-            iterations: Iterations::Bits,
-            mutations: vec![Mutation {
-                range: None,
-                mutation: MutatorType::BitFlipper { width: 1 },
-            }],
-        }]);
-
-        // Bytes in their original state
-        assert_eq!(bytes.read(), b"foo");
-
-        // Advance the mutation
-        bytes.next();
-
-        // We've flipped the first bit (little endian)
-        // 0b1100110 -> 0b1100111, 103 -> 102, f -> g
-        assert_eq!(bytes.read(), b"goo");
     }
 }

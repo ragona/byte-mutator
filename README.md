@@ -3,7 +3,32 @@
 of a fuzzing workflow to configure how you want your input mutated. For example, you might want to do one pass where 
 you don't mess with the header of your message, and you only mutate the body -- or you could mutate them differently. 
 
-## Example 
+## Examples
+
+### BitFlipper
+This example is configured to flip every bit in the bytes one at a time.
+```rust
+let mut bytes = ByteMutator::new(b"foo").with_stages(vec![Stage {
+    count: 0,
+    iterations: Iterations::Bits,
+    mutations: vec![Mutation {
+        range: None,
+        mutation: MutationType::BitFlipper { width: 1 },
+    }],
+}]);
+
+// Bytes in their original state
+assert_eq!(bytes.read(), b"foo");
+
+// Advance the mutation
+bytes.next();
+
+// We've flipped the first bit (little endian)
+// 0b1100110 -> 0b1100111, 103 -> 102, f -> g
+assert_eq!(bytes.read(), b"goo");
+```
+
+### Load from config
 This is an example of a mutator configured to flip bits forever. 
 ```toml
 [[stages]]

@@ -3,7 +3,7 @@
 //! # Example
 //! ```
 //! use byte_mutator::mutators::Mutation;
-//! use byte_mutator::mutators::MutatorType::BitFlipper;
+//! use byte_mutator::mutators::MutationType::BitFlipper;
 //!
 //! let bitflipper = Mutation{
 //!     range: None,
@@ -24,7 +24,7 @@ use crate::mutators::bitflipper::BitFlipper;
 pub mod bitflipper;
 
 #[derive(Debug, Deserialize, Clone)]
-pub enum MutatorType {
+pub enum MutationType {
     /// Flips `width` number of bits.
     BitFlipper { width: u8 },
 }
@@ -35,12 +35,12 @@ pub struct Mutation {
     /// Optional subslice range (e.g. Some(0, 3) only mutates the first three bytes)
     pub range: Option<(usize, usize)>,
     /// Type of mutator (e.g. MutatorType::BitFlipper)
-    pub mutation: MutatorType,
+    pub mutation: MutationType,
 }
 
 impl Mutation {
     /// Create a new `Mutation`, optionally scoped to operate only on a subslice
-    pub const fn new(mutator_type: MutatorType, range: Option<(usize, usize)>) -> Self {
+    pub const fn new(mutator_type: MutationType, range: Option<(usize, usize)>) -> Self {
         Self {
             range,
             mutation: mutator_type,
@@ -50,7 +50,7 @@ impl Mutation {
     /// Execute the mutation
     pub fn mutate(&self, bytes: &mut [u8], i: usize) -> (usize, usize) {
         match self.mutation {
-            MutatorType::BitFlipper { width } => BitFlipper::mutate(bytes, i, width),
+            MutationType::BitFlipper { width } => BitFlipper::mutate(bytes, i, width),
             // todo: Closure type bitflipper?
         }
     }
