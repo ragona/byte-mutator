@@ -1,13 +1,12 @@
 [package]
 name = "byte-mutator"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["ragona <ryanragona@gmail.com>"]
 edition = "2018"
 description = "Library to define staged mutations for a series of bytes"
 license = "MIT"
 repository = "https://github.com/ragona/byte-mutator"
 keywords = ["fuzz", "fuzzing", "mutation", "mutator", "bytes"]
-categories = ["fuzzing"]
 readme = "README.md"
 
 [dependencies]
