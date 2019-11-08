@@ -4,7 +4,7 @@
 pub struct BitFlipper {}
 
 impl BitFlipper {
-    pub fn mutate(bytes: &mut [u8], i: usize, width: u8) -> (usize, usize) {
+    pub fn mutate(bytes: &mut [u8], i: usize, _width: u8) {
         let i = i % (bytes.len() * 8);
         let byte = i / 8;
         let bit = i % 8;
@@ -12,8 +12,6 @@ impl BitFlipper {
 
         // todo: Implement width
         bytes[byte] = v;
-
-        (i, i + width as usize)
     }
 }
 

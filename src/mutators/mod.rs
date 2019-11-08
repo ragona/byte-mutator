@@ -48,7 +48,7 @@ impl Mutation {
     }
 
     /// Execute the mutation
-    pub fn mutate(&self, bytes: &mut [u8], i: usize) -> (usize, usize) {
+    pub fn mutate(&self, bytes: &mut [u8], i: usize) {
         match self.mutation {
             MutationType::BitFlipper { width } => BitFlipper::mutate(bytes, i, width),
             // todo: Closure type bitflipper?
