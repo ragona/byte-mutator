@@ -1,15 +1,8 @@
 //! # Byte Mutator
 //!
 //! `byte-mutator` is a crate for defining a set of rules by which to mutate byte arrays. It
-//! contains two main primitives: `Stage`, and `Mutator`. A `Stage` defines how many iterations
-//! to run via the `Iterations` enum, and a `Mutator` defines which `MutatorType` to perform across
-//! which range of bytes.
-//!
-//!`byte-mutator` internally uses an `UndoBuffer`, which is a data structure that exposes mutable
-//! `&[u8]` slices, and can undo changes in order to reset and perform another mutation from the
-//! clean starting state provided at initialization. This is important to avoid utterly mangling
-//! the input; we want to identify small novel changes that produce a different output from the
-//! target program, and then reuse that new state to perform further mutations.
+//! contains two main primitives: `Stage`, and `Mutator`. A `Stage` allows multiple mutations per
+//! step, and a Mutator is a small stateful object that
 //!
 //! ```
 //! ```
@@ -24,6 +17,7 @@ pub mod mutators;
 pub mod undo_buffer;
 
 /// Used to limit the number of iterations in a `Stage`.
+/// todo: Unused, fix
 #[derive(Clone, Debug, Deserialize)]
 pub enum Iterations {
     /// One iteration per bit in slice
@@ -42,29 +36,26 @@ pub struct Stage {
     /// Current number of iterations.
     /// This can start at > 0 if you want to reproduce something from an earlier run.
     pub count: usize,
-    /// Max number of iterations
-    pub iterations: Iterations,
+    /// Optional max number of iterations
+    pub max: Option<usize>,
     /// Group of mutations, all of which are performed every time.
     pub mutations: Vec<Mutation>,
 }
 
 impl Stage {
-    /// Creates a new `Stage`
-    pub fn new(count: usize, mutations: Vec<Mutation>, iterations: Iterations) -> Self {
+    pub fn new(count: usize, mutations: Vec<Mutation>, max: Option<usize>) -> Self {
         Self {
             count,
             mutations,
-            iterations,
+            max,
         }
     }
 
     /// Returns whether the stage is complete
-    pub fn is_done(&self, num_bytes: usize) -> bool {
-        match self.iterations {
-            Iterations::Bits => self.count >= num_bytes * 8,
-            Iterations::Bytes => self.count >= num_bytes,
-            Iterations::Limited(n) => self.count >= n,
-            Iterations::Unlimited => false,
+    pub fn is_done(&self) -> bool {
+        match self.max {
+            None => false,
+            Some(n) => self.count >= n,
         }
     }
 
@@ -82,14 +73,13 @@ impl Stage {
 impl Default for Stage {
     /// Default `Stage` with no mutations and unlimited iterations
     fn default() -> Self {
-        Stage::new(0, vec![], Iterations::Unlimited)
+        Stage::new(0, vec![], None)
     }
 }
 
-/// A fixed size buffer with a defined set of stages of mutations that will be applied to the buffer
+/// A defined set of stages of mutations
 #[derive(Debug, Clone)]
 pub struct ByteMutator {
-    bytes: UndoBuffer,
     /// Queue of outstanding stages, ordered from first to last. Drains from the front.
     stages: Vec<Stage>,
     /// The in-progress stage.
@@ -97,10 +87,9 @@ pub struct ByteMutator {
 }
 
 impl ByteMutator {
-    /// Create a new `ByteMutator` from the provided byte slice. Copies into two internal buffers.
-    pub fn new(bytes: &[u8]) -> Self {
+    /// Create a new `ByteMutator`.
+    pub fn new() -> Self {
         Self {
-            bytes: UndoBuffer::new(bytes),
             stages: vec![],
             cur_stage: 0,
         }
@@ -112,9 +101,8 @@ impl ByteMutator {
     }
 
     /// Creates a new `ByteMutator` and consumes the `stages` configured in `config`
-    pub fn new_from_config(bytes: &[u8], config: FuzzConfig) -> Self {
+    pub fn new_from_config(config: FuzzConfig) -> Self {
         Self {
-            bytes: UndoBuffer::new(bytes),
             stages: config.stages,
             cur_stage: 0,
         }
@@ -132,36 +120,32 @@ impl ByteMutator {
 
     /// Advance the mutation one step. Resets outstanding changes, advances the stage state,
     /// and mutates using all mutators defined in the stage.
+    /// todo: Make this an actual iterator
     pub fn next(&mut self) {
         let stage = match self.stages.get_mut(0) {
             None => return, // nothing to do
             Some(s) => s,
         };
 
-        // we reset the last change first so that we're getting small changes not huge ones
-        self.bytes.undo();
-
-        for mutation in &mut stage.mutations {
-            match mutation.range {
-                Some((start, end)) => {
-                    mutation.mutate(self.bytes.get_mut_range(start, end), stage.count)
-                }
-                None => mutation.mutate(self.bytes.get_mut(), stage.count),
-            };
-        }
-
         stage.next();
 
-        if stage.is_done(self.bytes.len()) {
+        if stage.is_done() {
             self.stages.drain(..1);
-            self.bytes.undo();
         }
     }
 
-    /// Returns an immutable slice of the mutable buffer.
-    /// Exposes the current state of the `ByteMutator`.
-    pub fn read(&self) -> &[u8] {
-        self.bytes.read()
+    pub fn mutate(&self, bytes: &mut [u8]) {
+        let stage = match self.stages.get(0) {
+            None => return, // nothing to do
+            Some(s) => s,
+        };
+
+        for mutation in &stage.mutations {
+            match mutation.range {
+                Some((start, end)) => mutation.mutate(&mut bytes[start..end], stage.count),
+                None => mutation.mutate(bytes, stage.count),
+            };
+        }
     }
 }
 
@@ -172,7 +156,7 @@ mod tests {
 
     #[test]
     fn mutator_stage() {
-        let mut byte_mutator = ByteMutator::new(b"foo");
+        let mut byte_mutator = ByteMutator::new();
 
         byte_mutator.add_stage(Stage::new(
             0,
@@ -180,7 +164,7 @@ mod tests {
                 range: None,
                 mutation: MutationType::BitFlipper { width: 1 },
             }],
-            Iterations::Limited(10),
+            Some(10),
         ));
 
         assert_eq!(byte_mutator.remaining_stages(), 1);

@@ -7,10 +7,12 @@ you don't mess with the header of your message, and you only mutate the body -- 
 
 ### BitFlipper
 This example is configured to flip every bit in the bytes one at a time.
+
 ```rust
-let mut bytes = ByteMutator::new(b"foo").with_stages(vec![Stage {
+let mut bytes = b"foo".to_vec();
+let mut mutator = ByteMutator::new().with_stages(vec![Stage {
     count: 0,
-    iterations: Iterations::Bits,
+    max: Some(24),
     mutations: vec![Mutation {
         range: None,
         mutation: MutationType::BitFlipper { width: 1 },
@@ -18,14 +20,14 @@ let mut bytes = ByteMutator::new(b"foo").with_stages(vec![Stage {
 }]);
 
 // Bytes in their original state
-assert_eq!(bytes.read(), b"foo");
+assert_eq!(&bytes, b"foo");
 
-// Advance the mutation
-bytes.next();
+// Perform a single mutation
+mutator.mutate(&mut bytes);
 
 // We've flipped the first bit (little endian)
 // 0b1100110 -> 0b1100111, 103 -> 102, f -> g
-assert_eq!(bytes.read(), b"goo");
+assert_eq!(&bytes, b"goo");
 ```
 
 ### Load from config
@@ -34,8 +36,6 @@ This is an example of a mutator configured to flip bits forever.
 [[stages]]
     # Iteration count at which to start the loop (useful for starting over from a future state)
     count = 0
-    # Optional range to limit the number of times that this stage runs
-    iterations = "Unlimited"
 
     # A list of mutations to perform on this stage
     [[stages.mutations]]
@@ -43,19 +43,11 @@ This is an example of a mutator configured to flip bits forever.
         mutation = {"BitFlipper" = {width = 1 }}
 ```
 
-```rust
-let mut bytes = ByteMutator::new_from_config(b"foo", FuzzConfig::from_file("config.toml"));
-
-for _ in 0..20 {
-    // this advances the state by one step
-    bytes.next();
-    // each time this will be one bit different from the original
-    dbg!(bytes.read());
-}
-```
-
 ## Release History
 
+* 0.2.0
+    * Removed data structure from ByteMutator. Mutation now requires a `&mut [u8]` reference.
+    * Removed `Iterations`, just added a simple `Option<usize>` for `max`. 
 * 0.1.0
     * Initial release
 

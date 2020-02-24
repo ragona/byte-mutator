@@ -32,7 +32,7 @@ pub enum MutationType {
 #[derive(Debug, Deserialize, Clone)]
 /// A single mutation, optionally scoped to only operate on a subslice
 pub struct Mutation {
-    /// Optional subslice range (e.g. Some(0, 3) only mutates the first three bytes)
+    /// Optional subslice range (e.g. Some((0, 3)) only mutates the first three bytes)
     pub range: Option<(usize, usize)>,
     /// Type of mutator (e.g. MutatorType::BitFlipper)
     pub mutation: MutationType,

@@ -21,7 +21,7 @@ impl FuzzConfig {
         Self {
             stages: vec![Stage {
                 count: 0,
-                iterations: Iterations::Unlimited,
+                max: None,
                 mutations: vec![Mutation {
                     range: None,
                     mutation: MutationType::BitFlipper { width: 1 },
@@ -54,7 +54,7 @@ mod tests {
             r#"
                 [[stages]]
                     count = 0
-                    iterations = { "Limited" = 10 }
+                    max = 10
                     
                     # a list of mutations to perform on this stage
                     [[stages.mutations]]
