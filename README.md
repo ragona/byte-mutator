@@ -55,7 +55,7 @@ This is an example of a mutator configured to flip bits forever.
 
 Ryan Ragona – [@ryanragona](https://twitter.com/ryanragona) – [https://github.com/ragona](https://github.com/ragona/)
 
-Distributed under the MTT license. See ``LICENSE`` for more information.
+Distributed under the MIT license. See ``LICENSE`` for more information.
 
 ## Contributing
 Always happy to see PRs or Issues. 
